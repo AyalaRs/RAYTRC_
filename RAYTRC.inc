@@ -71,7 +71,7 @@ tData struct
 	Res            tPos <>;<320,200>
 tData ends
 
-LightPow    equ 20
+
 tLightRay struc
 	O    tPosition    <>
 	struc dir
@@ -101,6 +101,7 @@ tMapCastDist struct
 	MapCast tMapCast  <>
 	MapDist tMapDist  <>
 tMapCastDist ends
+
 
 
 tREG struct
