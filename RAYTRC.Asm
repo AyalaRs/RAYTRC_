@@ -259,7 +259,7 @@ RestoreVideoMode endp
 PickColor proc uses si
 	mov al, byte ptr [bx].P.Pos.x ;[gPixel.Pos.x]
 	and al, 0fh
-	mov ah, byte ptr [bx].P.Pos.x
+	mov ah, byte ptr [bx].P.Pos.y
 	and ah, 0fh
 	mov cl, 4
 	shl ah, cl
