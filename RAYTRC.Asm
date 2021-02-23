@@ -10,7 +10,7 @@
 
 
 .model tiny
-.686p
+.286
 ;option prologue:none
 ;option epilogue:none
 option casemap:none
@@ -21,6 +21,12 @@ option epilogue:epiloguedef
 ;assume di:error
 
 ;DEBUGMODE EQU 1
+
+Interlaced equ 1
+
+NumSpheres equ 3
+WWWWW      equ 320
+HHHHH      equ 200
 
 include RAYTRC.inc
 
@@ -60,7 +66,7 @@ _this   label tClass
 	gSavedVideoMode dw 0
 	gTempW          dw 0
 	gSizeOf_Sphere  dw sizeof tSphere
-	gRes            tPos <320,200>
+	gRes            tPos <WWWWW,HHHHH>
 ;tData ends
 
 
@@ -133,17 +139,29 @@ Start:
 	assume bx:ptr tClass
 	
 	cmp [bx].Check, 0AA55h 
+	mov al,'1'
 	jnz @F
 	
 	call SetupVideoMode  
-
-	call RenderScreen
-	call RestoreVideoMode
 	
+	cmp [bx].Check, 0AA55h 
+	mov al,'2'
+	jnz @F
+	
+	call RenderScreen
+	
+	cmp [bx].Check, 0AA55h 
+	mov al,'3'
+	jnz @F
+	
+	call RestoreVideoMode
+	mov al,'4'
 
 @@: call @F
-	byte 'potato','$',13,10
-@@:	pop dx
+	byte ' potato','$',13,10
+@@:	pop bx
+	mov [bx],al
+	mov dx,bx
 	mov ah,9
 	int 21h	
 	
@@ -163,6 +181,7 @@ SetupPalette proc
 	mov cx, 256
 	
 LoopSetPalette:
+
 		push cx
 		mov dx, 03C8h
 		mov al, bl ;The current color index
@@ -360,6 +379,7 @@ RenderScreen proc uses di si
 ;	assume bx:ptr tPixel
 	
 	mov  [bx].P.Pos.y, 0
+@@:
 	.repeat
 		;Calculate Ray-V
 		mov ax, [bx].P.Pos.y
@@ -406,17 +426,34 @@ RenderScreen proc uses di si
 			; Render the current pixel color
 			call RenderScene
 			
-			
+			;push si
+			;mov si,[bx].P.Pos.x
+			;and si,0ffh
+			;mov al,[si][bx].DM
+			;pop si
 			
 			stosb
 			
-		
+	
 			inc  [bx].P.Pos.x
-		.until [bx].P.Pos.x >= 320
-		
-		inc [bx].P.Pos.y
-	.until [bx].P.Pos.y>= 200
+		.until [bx].P.Pos.x >= WWWWW
 
+		
+IFDEF Interlaced
+
+		lea di,[di+WWWWW]
+		inc [bx].P.Pos.y
+ENDIF
+		inc [bx].P.Pos.y
+	.until [bx].P.Pos.y>= HHHHH
+	
+IFDEF Interlaced
+	and [bx].P.Pos.y,1
+	mov [bx].P.Pos.y,1
+	mov di,WWWWW
+	jz	@B
+ENDIF	
+	
 	
 	; Wait for any keystroke to exit
 	mov ah, 07h
