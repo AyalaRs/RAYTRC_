@@ -23,10 +23,16 @@ option epilogue:epiloguedef
 ;DEBUGMODE EQU 1
 
 Interlaced equ 1
-
+LightPow   equ 20
 NumSpheres equ 3
-WWWWW      equ 320
-HHHHH      equ 200
+
+WWWWW      equ 120
+MAXWW      equ 320
+
+HHHHH      equ 80
+MAXHH      equ 200
+
+OWAOH      = MAXWW * HHHHH + WWWWW
 
 include RAYTRC.inc
 
@@ -373,7 +379,7 @@ RenderScreen proc uses di si
 	fstp  [bx].M.Ray.dir.Light.z
 
 	;di: Used to write display buffer
-	xor di, di
+	mov di,OWAOH
 	;Loop for scan lines
 ;	lea bx,gPixel
 ;	assume bx:ptr tPixel
@@ -438,10 +444,10 @@ RenderScreen proc uses di si
 			inc  [bx].P.Pos.x
 		.until [bx].P.Pos.x >= WWWWW
 
-		
+		lea di,[di][MAXWW-WWWWW]
 IFDEF Interlaced
 
-		lea di,[di+WWWWW]
+		lea di,[di+ MAXWW]
 		inc [bx].P.Pos.y
 ENDIF
 		inc [bx].P.Pos.y
@@ -450,7 +456,7 @@ ENDIF
 IFDEF Interlaced
 	and [bx].P.Pos.y,1
 	mov [bx].P.Pos.y,1
-	mov di,WWWWW
+	mov di,OWAOH + MAXWW
 	jz	@B
 ENDIF	
 	
