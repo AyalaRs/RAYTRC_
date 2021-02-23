@@ -24,8 +24,18 @@ DEBUGMODE EQU 1
 
 include RAYTRC.inc
 
+
+;std
+;.data
+;#
+
+;shellcode
 .code
+_entry: 
 	call Start
+;#	
+	
+	
 _this   label tClass
 
 ;tConst struct
@@ -110,10 +120,16 @@ IF ($ - offset _this) NE (sizeof tClass)
 ENDIF
                db '$',0
 	
-
-
+;std
+;.code
+;org 100h
+;#
 Start:
-	pop bx
+;shellcode
+	pop bx ;shellcode
+	
+;std
+    ;lea bx,offset _this
 	assume bx:ptr tClass
 	
 	cmp [bx].Check, 0AA55h 
@@ -194,21 +210,25 @@ SetupPalette endp
 ;******************************************************************************
 SetupVideoMode proc
 	;Get current display mode
+	
+	;push bx
 	mov [bx].R.bp_,bp
 	mov bp,bx
 	
 	mov ah, 0fh
-	int 10h
+	int 10h  ;The bx data is corrupted
 	
 	mov bx,bp
 	mov byte ptr [bx].Data_.SavedVideoMode, al
 
 	;Set display mode to 320x200 graphic 256-color mode
 	mov ax, 13h
-	int 10h
-
-	call SetupPalette
+	int 10h   ;The bx data is corrupted
 	
+	mov bx,bp
+	call SetupPalette ;The bx data is corrupted
+	
+	;pop bx
 	mov bx,bp
 	mov bp,[bx].R.bp_
 	ret
@@ -1038,8 +1058,8 @@ SetRayOrg proc
 	ret 
 SetRayOrg endp
 
+;std
+;end start
 
-
-
-
-end
+;shellcode
+end _entry
