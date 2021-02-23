@@ -102,7 +102,6 @@ tMapCastDist struct
 	MapDist tMapDist  <>
 tMapCastDist ends
 
-NumSpheres equ 3
 
 tREG struct
 	ax_ dw ?
