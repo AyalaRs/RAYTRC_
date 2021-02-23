@@ -20,7 +20,7 @@ option epilogue:epiloguedef
 ;assume si:error
 ;assume di:error
 
-DEBUGMODE EQU 1
+;DEBUGMODE EQU 1
 
 include RAYTRC.inc
 
