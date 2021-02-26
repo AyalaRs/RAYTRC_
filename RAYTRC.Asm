@@ -107,7 +107,7 @@ DitherMatrix label byte
                       <0.8, 0.9, 1.0>,\
                       <0, 0, 0>\
                       >
-	gCamPos     tPosition <-2.0, 2.0, 7.0>
+	gCamPos     tPosition <0.0, 2.0, 7.0>
 
 ;tBB struct
 	gBB         tPosition < 2.5, 4.5, 3.5>
@@ -419,7 +419,6 @@ RenderScreen proc uses di si
 			mov word ptr [Local_Cam_U], ax
 			fild word ptr [Local_Cam_U]
 			fidiv word ptr [bx].Data_.Res.y
-			
 			fst [Local_Cam_U]
 
 			;Normalize Ray
@@ -436,18 +435,14 @@ RenderScreen proc uses di si
 			fdivr [Local_Cam_U]
 			fstp  [bx].M.Ray.dir.Ray.x
 			
-			
-            
-            ;y = V / D
+			;y = V / D
 			fld  [Local_Cam_V]
 			fdiv  [Local_Cam_D]
-
 			fstp  [bx].M.Ray.dir.Ray.y
 			
 			;z = W / D
 			fld  [Local_Cam_W]
 			fdiv  [Local_Cam_D]
-	
 			fstp  [bx].M.Ray.dir.Ray.z
 
 
@@ -638,21 +633,25 @@ assume di:error
 	fst  [bx].M.MapCast.N.y
 	fstp [bx].M.MapCast.N.z
 
+
 ; Stepping the point to go forward
 	mov cx, MapCast_Iterate
 LoopIterate:
+
 	fld [bx].M.Ray.O.x 
 	fld [bx].M.Ray.dir.Ray.x
 	fmul [bx].M.MapCast.D
 	fadd
 	fstp [bx].M.MapDist.O.x
+	
 
 	fld [bx].M.Ray.O.y 
 	fld [bx].M.Ray.dir.Ray.y
 	fmul [bx].M.MapCast.D
 	fadd
 	fstp [bx].M.MapDist.O.y
-
+	
+	
 	fld [bx].M.Ray.O.z 
 	fld [bx].M.Ray.dir.Ray.z
 	fmul [bx].M.MapCast.D
