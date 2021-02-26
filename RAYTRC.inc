@@ -55,6 +55,7 @@ tConst struct
 	FBigValue dd ?;9999999.0
 	FZero     dd ?;0
 	F05       dd ?;0.5
+	FM1       dd ?;-1.0
 	C2        dw ?;2
 	C255      dw ?;255
 	C256      dw ?;256
