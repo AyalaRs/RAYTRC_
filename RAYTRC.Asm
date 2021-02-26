@@ -17,9 +17,6 @@ option casemap:none
 option prologue:prologuedef
 option epilogue:epiloguedef
 
-;assume si:error
-;assume di:error
-
 ;DEBUGMODE EQU 1
 
 Interlaced equ 1
@@ -56,8 +53,9 @@ _this   label tClass
 	gFM175     dd -1.75
 	gFTimeFreq dd 1193186.0
 	gFBigValue dd 9999999.0
-	gFZero     dd 0
+	gFZero     dd 0.0
 	gF05       dd 0.5
+	gFM1       dd -1.0
 	gC2        dw 2
 	gC255      dw 255
 	gC256      dw 256
@@ -91,7 +89,7 @@ DitherMatrix label byte
 		ENDM
 		dm_y = dm_y + 1
 	ENDM
-
+ 
 
 	SampleDepth     EQU 12
 	MapCast_Iterate EQU 12
@@ -109,7 +107,7 @@ DitherMatrix label byte
                       <0.8, 0.9, 1.0>,\
                       <0, 0, 0>\
                       >
-	gCamPos     tPosition < 0.0, 2.0, 7.0>
+	gCamPos     tPosition <-2.0, 2.0, 7.0>
 
 ;tBB struct
 	gBB         tPosition < 2.5, 4.5, 3.5>
@@ -181,7 +179,8 @@ Start:
 ; implement the ordered-dithering algorithm to gain a better appearance.
 ;******************************************************************************
 SetupPalette proc
-	
+assume si:error
+assume di:error	
 	;Set up palette
 	mov bl, 0
 	mov cx, 256
@@ -222,7 +221,8 @@ LoopSetPalette:
 		inc bl
 		pop cx
 	loop LoopSetPalette
-
+assume si:nothing
+assume di:nothing
 	ret
 SetupPalette endp
 
@@ -234,6 +234,8 @@ SetupPalette endp
 ; The previous video mode will be saved.
 ;******************************************************************************
 SetupVideoMode proc
+assume si:error
+assume di:error
 	;Get current display mode
 	
 	;push bx
@@ -256,6 +258,9 @@ SetupVideoMode proc
 	;pop bx
 	mov bx,bp
 	mov bp,[bx].R.bp_
+	
+assume si:nothing
+assume di:nothing
 	ret
 SetupVideoMode endp
 
@@ -265,6 +270,9 @@ SetupVideoMode endp
 ;******************************************************************************
 
 RestoreVideoMode proc
+assume si:error
+assume di:error
+
 	mov [bx].R.bp_,bp
 	mov bp,bx
 	;Restore video mode
@@ -273,6 +281,9 @@ RestoreVideoMode proc
 	
 	mov bx,bp
 	mov bp,[bx].R.bp_
+	
+assume si:nothing
+assume di:nothing
 	ret
 RestoreVideoMode endp
 ;******************************************************************************
@@ -282,6 +293,8 @@ RestoreVideoMode endp
 ;******************************************************************************
 
 PickColor proc uses si
+
+assume di:error
 	mov al, byte ptr [bx].P.Pos.x ;[gPixel.Pos.x]
 	and al, 0fh
 	mov ah, byte ptr [bx].P.Pos.y
@@ -304,9 +317,6 @@ PickColor proc uses si
 	inc cl
 	shr al, cl
 	
-	
-;	lea bx,gPixel
-;	assume bx:ptr tPixel
 		
 	add byte ptr [bx].P.Col.R, dl
 	jnc @F
@@ -330,7 +340,7 @@ PickColor proc uses si
 	shr al, cl
 	or al, byte ptr [bx].P.Col.B
 	
-
+assume di:nothing
 	ret
 PickColor endp
 
@@ -353,10 +363,7 @@ RenderScreen proc uses di si
 	fstp  [Local_Cam_W]
 
 	;Do some initialize
-	
-;	lea bx,gLightRay.dir.Light
-;	assume bx:ptr tPosition
-	
+	;L = sqrt(x^2 + y^2 + z^2)
 	fld  [bx].M.Ray.dir.Light.x
 	fmul st(0),st(0)
 	fld  [bx].M.Ray.dir.Light.y
@@ -367,22 +374,23 @@ RenderScreen proc uses di si
 	fadd
 	fsqrt
 	
+	;x = x / L
 	fld st(0)
 	fdivr [bx].M.Ray.dir.Light.x
 	fstp  [bx].M.Ray.dir.Light.x
 	
+	;y = y / L
 	fld st(0)
 	fdivr [bx].M.Ray.dir.Light.y
 	fstp  [bx].M.Ray.dir.Light.y
 	
+	;z = z / L
 	fdivr [bx].M.Ray.dir.Light.z
 	fstp  [bx].M.Ray.dir.Light.z
 
 	;di: Used to write display buffer
 	mov di,OWAOH
 	;Loop for scan lines
-;	lea bx,gPixel
-;	assume bx:ptr tPixel
 	
 	mov  [bx].P.Pos.y, 0
 @@:
@@ -407,6 +415,7 @@ RenderScreen proc uses di si
 			mov ax, [bx].P.Pos.x
 			add ax, ax
 			sub ax, [bx].Data_.Res.x
+			
 			mov word ptr [Local_Cam_U], ax
 			fild word ptr [Local_Cam_U]
 			fidiv word ptr [bx].Data_.Res.y
@@ -419,15 +428,28 @@ RenderScreen proc uses di si
 			fadd
 			fadd [bx].Val_.F30625;[F30625]
 			fsqrt
+			;D = sqrt(U^2 + V^2 + W^2)
+			
+			;x = U / D
 			fst [Local_Cam_D]
 			fdivr [Local_Cam_U]
+			fmul  [bx].Val_.FM1
 			fstp  [bx].M.Ray.dir.Ray.x
+			
+			
+            
+            ;y = V / D
 			fld  [Local_Cam_V]
 			fdiv  [Local_Cam_D]
+
 			fstp  [bx].M.Ray.dir.Ray.y
+			
+			;z = W / D
 			fld  [Local_Cam_W]
 			fdiv  [Local_Cam_D]
+	
 			fstp  [bx].M.Ray.dir.Ray.z
+
 
 			; Render the current pixel color
 			call RenderScene
@@ -474,7 +496,8 @@ RenderScreen endp
 ;******************************************************************************
 GetSkyColor proc 
 	; SunLum = Dot(RayDir, -LightDir)
-
+assume si:error
+assume di:error
 	fld  [bx].M.Ray.dir.Ray.x
 	fmul [bx].M.Ray.dir.Light.x
 	fld  [bx].M.Ray.dir.Ray.y
@@ -510,8 +533,6 @@ GetSkyColor proc
 	fsub
 
 	; Mix(SkyColor, FogColor, FogDensity)
-;	lea bx,ColorMix
-;	assume bx:ptr tColorMix
 	
 	fld st(0)
 	fmul  [bx].Mix.FogColor.R
@@ -553,15 +574,16 @@ GetSkyColor proc
 	fadd  [bx].Mix.GetSkyColor.B
 	fstp  [bx].Mix.GetSkyColor.B
 
+assume si:nothing
+assume di:nothing
 	ret
 GetSkyColor endp
 ;******************************************************************************
 ; Pick up a color that represents the sky from the `RayDir` vector.
 ;******************************************************************************
 MapDistProc proc uses si di
-;	lea bx, gCastDistWithSpheres
-;	assume bx:ptr tCastDistWithSpheres
-	
+
+
 	fld  [bx].M.MapDist.O.y
 	fstp [bx].M.MapDist.D
 	mov  [bx].M.MapDist.I,-1
@@ -607,11 +629,9 @@ MapDistProc endp
 ; casts to the scene. Returns the cast point coordinates `MapCast` and the
 ; distance to the origin of the ray and the surface normal from the scene.
 ;******************************************************************************
-MapCastProc proc
+MapCastProc proc uses si
 
-;	lea bx, gCastDistWithSpheres
-;	assume bx:ptr tCastDistWithSpheres
-
+assume di:error
 	fldz
 	fst  [bx].M.MapCast.D
 	fst  [bx].M.MapCast.N.x
@@ -679,9 +699,11 @@ ToSky:
 
 ; The origin of the ray is inside the bounding box
 InsideBB:
-	push cx
+	;push cx
+	mov si,cx
 	call MapDistProc
-	pop cx
+	;pop cx
+	mov cx,si
 
 	fld [bx].M.MapDist.D
 	fcomp [bx].Data_.DistEpsilon;[DistEpsilon]
@@ -770,13 +792,14 @@ ExitIterate:
 	mov [bx].M.MapCast.I, -2
 	clc
 done:
-
+assume di:nothing
 	ret
 MapCastProc endp
 
 ; Subroutine: MapCast = RayOrg + RayDir * Dist
 SetCastCrd proc
-
+assume si:error
+assume di:error
 
 	fld [bx].M.Ray.O.x
 	fld [bx].M.Ray.dir.Ray.x
@@ -795,17 +818,21 @@ SetCastCrd proc
 	fmul [bx].M.MapCast.D
 	fadd
 	fstp [bx].M.MapCast.O.z
-	
 
 	ret
+	
+assume si:nothing
+assume di:nothing
+
 SetCastCrd endp	
 
 ;******************************************************************************
 ; Check if the ray from the origin `RayOrg` towards the direction `RayDir` is
 ; going away from the bounding box
 ;******************************************************************************
-IsAwayFromBB proc uses bx
-
+IsAwayFromBB proc
+assume si:error
+assume di:error
 	
 	fld [bx].M.Ray.O.x
 	fcomp [bx].BB.N.x; [BBneg.x]
@@ -909,6 +936,8 @@ ZPIsOK:
 done:
 
 	ret
+assume si:nothing
+assume di:nothing
 IsAwayFromBB endp
 	
 ;******************************************************************************
@@ -916,23 +945,30 @@ IsAwayFromBB endp
 ; direction `RayDir`
 ;******************************************************************************
 RenderScene proc uses si
-	
+assume di:error
 	fld1
 	fst  [bx].Mask_.R
 	fst  [bx].Mask_.G
 	fstp [bx].Mask_.B
+
+
 	fld  [bx].Cam.x
 	fstp [bx].M.Ray.O.x
 	fld  [bx].Cam.y
 	fstp  [bx].M.Ray.O.y
 	fld  [bx].Cam.z
 	fstp  [bx].M.Ray.O.z
+	
 
+	
 	mov cx, SampleDepth
 LoopSampling:
-	push cx
+	;push cx
+	mov si,cx
 	call MapCastProc
-	pop cx
+	;pop cx
+	mov cx,si
+	
 ;.if !CARRY?	
 	jc CastSphereOrGround
 
@@ -1075,10 +1111,14 @@ B_OK:
 	call PickColor
 	
 	ret
+assume si:nothing
+assume di:nothing
 RenderScene endp
 
 ; When cast, set the ray origin near the cast point
 SetRayOrg proc
+assume si:error
+assume di:error
 
 	fld  [bx].M.MapCast.O.x
 	fld  [bx].M.Ray.dir.Ray.x
@@ -1099,6 +1139,8 @@ SetRayOrg proc
 	fstp [bx].M.Ray.O.z
 
 	ret 
+assume si:nothing
+assume di:nothing
 SetRayOrg endp
 
 ;std
