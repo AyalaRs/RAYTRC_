@@ -419,6 +419,7 @@ RenderScreen proc uses di si
 			mov word ptr [Local_Cam_U], ax
 			fild word ptr [Local_Cam_U]
 			fidiv word ptr [bx].Data_.Res.y
+			
 			fst [Local_Cam_U]
 
 			;Normalize Ray
@@ -433,7 +434,6 @@ RenderScreen proc uses di si
 			;x = U / D
 			fst [Local_Cam_D]
 			fdivr [Local_Cam_U]
-			fmul  [bx].Val_.FM1
 			fstp  [bx].M.Ray.dir.Ray.x
 			
 			
